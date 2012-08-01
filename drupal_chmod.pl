@@ -6,6 +6,7 @@ use strict;
 
 ## Set modules used
 use Getopt::Long;
+use File::Basename;
 use File::Find;
 
 ## Set variables
@@ -52,15 +53,16 @@ my %perms = (
     },
 );
 my $permoptions = join(', ', keys %perms);
+my $scriptname = basename($0);
 my $help = "\nHelp: This script is used to fix permissions of a drupal installation
-you need to provide the following arguments:
+      you need to provide the following arguments:
     1) Path to your drupal installation
     2) Username of the user that you want to give files/directories ownership
     3) Permission set to use. Can be 'tight', 'medium', or 'loose'.
 Note: \"$group\" is assumed as the group the server is belonging to.
       If this is different you need to specify it manually with '-g' or '--group'.\n";
-my $usage = "\nUsage:\n (sudo) (perl) $0 (-p|--path) <drupal_path> (-u|--user) <user_name> (-s|--permset) <permission_set>\n
-$0 [OPTIONS]
+my $usage = "\nUsage:\n (sudo) (perl) $scriptname (-p|--path) <drupal_path> (-u|--user) <user_name> (-s|--permset) <permission_set>\n
+$scriptname [OPTIONS]
   -p, --path         The path to the drupal root directory (REQUIRED)
   -u, --user         The user to give ownership to for the entire tree (REQUIRED)
   -g, --group        The group to give ownership to for the entire tree (OPTIONAL)
@@ -68,7 +70,8 @@ $0 [OPTIONS]
       --permissions    Options are: $permoptions (REQUIRED)\n
   -d, --display      Display the permission set to be applied. Can also be used
                      without an option, in conjunction with '-s', as '-s tight -d'
-  -h, --help         Display this help and usage message.\n";
+  -h, --help         Display this help and usage message.
+  -o, --usage        Display just this usage message.\n";
 
 
 ## Parse the commandline
@@ -79,6 +82,7 @@ GetOptions (
     's|permset|permissions=s' => \$permset,
     'd|display:s' => \$showperms,
     'h|help' => sub {print $help; print $usage; exit;},
+    'o|usage' => sub {print $usage; exit;},
 );
 
 if ($showperms && ($showperms ne '' || ($showperms eq '' && $permset && $permset ne '') ) ) {
