@@ -10,13 +10,13 @@ use File::Basename;
 use File::Find;
 
 ## Set variables
-my $path;
-my $user;
+my $path ='.';
+my $user = getpwnam('www-data') ? 'www-data' : getpwnam('apache') ? 'apache' : undef;
 my $group = getgrnam('www-data') ? 'www-data' : getgrnam('apache') ? 'apache' : undef;
 my $uid;
 my $gid;
-my $permset;
-my $showperms = '';
+my $permset = 'UNSET';
+my $showperms = 'UNSET';
 my %perms = (
     'tight' => {
         'ddir' => '0750', # Drupal Root dirs
@@ -56,20 +56,21 @@ my $permoptions = join(', ', keys %perms);
 my $scriptname = basename($0);
 my $help = "\nHelp: This script is used to fix permissions of a drupal installation
       you need to provide the following arguments:
-    1) Path to your drupal installation
+    1) Path to your drupal installation (Defaults to current directory)
     2) Username of the user that you want to give files/directories ownership
     3) Permission set to use. Can be 'tight', 'medium', or 'loose'.
-Note: \"$group\" is assumed as the group the server is belonging to.
-      If this is different you need to specify it manually with '-g' or '--group'.\n";
-my $usage = "\nUsage:\n (sudo) (perl) $scriptname (-p|--path) <drupal_path> (-u|--user) <user_name> (-s|--permset) <permission_set>\n
+Note: $user:$group is assumed as the user and group the web server uses. If this is
+      different you need to specify it manually with '-u <user>' and '-g <group>'.\n";
+my $usage = "\nUsage:\n (sudo) $scriptname [-p <drupal_path>] [-u <user>] [-g <group>] -s <permission_set>\n
 $scriptname [OPTIONS]
-  -p, --path         The path to the drupal root directory (REQUIRED)
-  -u, --user         The user to give ownership to for the entire tree (REQUIRED)
-  -g, --group        The group to give ownership to for the entire tree (OPTIONAL)
-  -s, --permset,     The permission set to apply to files and folders in the tree.
-      --permissions    Options are: $permoptions (REQUIRED)\n
-  -d, --display      Display the permission set to be applied. Can also be used
-                     without an option, in conjunction with '-s', as '-s tight -d'
+  -p, --path         The path to the drupal root directory (DEFAULT: '$path')
+  -u, --user         The user to give ownership to for the entire tree (DEFAULT: '$user')
+  -g, --group        The group to give ownership to for the entire tree (DEFAULT: '$group')
+  -s, --permset,     (REQUIRED) The permission set to apply to files and
+      --permissions    folders in the tree. Options are: $permoptions\n
+  -d, --display      Display the permission set to be applied and exit. Options same as -s.
+                       Can also be used in conjunction with '-s', as '-s tight -d',
+                       to show 'rwx' permissions as well as apply them.
   -h, --help         Display this help and usage message.
   -o, --usage        Display just this usage message.\n";
 
@@ -85,9 +86,17 @@ GetOptions (
     'o|usage' => sub {print $usage; exit;},
 );
 
-if ($showperms && ($showperms ne '' || ($showperms eq '' && $permset && $permset ne '') ) ) {
+print "\$showperms: '$showperms'\n";
+print "\$permset:   '$permset'\n";
+print "\$user:      '$user'\n";
+print "\$path:      '$path'\n";
+print "\$group:     '$group'\n";
+
+if ($showperms ne 'UNSET' || ($permset ne 'UNSET' && $showperms eq '') ) {
     if ( grep { $_ eq $showperms } keys %perms ) {
         &show_permissions($showperms);
+    } elsif ( grep { $_ eq $permset } keys %perms ) {
+        &show_permissions($permset);
     } else {
         print "Please provide a valid permission set. Options are: $permoptions\n";
         print "To see what permissions will be set, use -d <permset> or --display <permset>\n";
@@ -142,7 +151,7 @@ sub show_permissions {
         print "$f => $perms{$set}{'special'}{$f}\t\t\t\t\t( ", &rwx($perms{$set}{'special'}{$f}), ")\n";
     }
     print "\n";
-    exit;
+    exit if $permset eq 'UNSET';
 }
 
 sub rwx {
@@ -155,7 +164,7 @@ sub rwx {
     }
     return $string;
 }
-        
+
 
 chdir "$path";
 
